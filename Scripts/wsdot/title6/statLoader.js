@@ -15,16 +15,29 @@ define([
 		*/
 		constructor: function (url) {
 			//  Query to get feature IDs.
-			var query, queryTask;
+			var self = this, query, queryTask;
 
 			query = new Query();
 			query.where = "1=1";
 
 			queryTask = new QueryTask(url);
+			queryTask.on("complete", function (featureSet) {
+				self.emit("query-group-complete", featureSet);
+			});
+			queryTask.on("error", function (error) {
+				self.emit("query-error", error);
+			});
+
 			queryTask.executeForIds(query, function (/**{Number[]}*/ objectIds) {
 				var i, l, idGroups = [], currentGroup;
 
-				console.log("count", objectIds.length);
+				self.emit("query-object-ids-complete", objectIds);
+
+				function submitQuery(objectIds) {
+					query.objectIds = objectIds;
+					query.returnGeometry = true;
+					queryTask.execute(query);
+				}
 
 				// Break object IDs into groups of 1000 or fewer.
 
@@ -37,9 +50,13 @@ define([
 					}
 				}
 
-				console.debug(idGroups);
+				for (i = 0, l = idGroups.length; i < l; i += 1) {
+					currentGroup = idGroups[i];
+					submitQuery(objectIds);
+				}
+
 			}, function (/**{Error}*/ error) {
-				console.error(error);
+				self.emit("query-object-ids-error", error);
 			});
 		}
 	});
