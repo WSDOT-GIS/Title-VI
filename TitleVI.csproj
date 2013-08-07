@@ -41,7 +41,10 @@
     <Content Include="index.html" />
     <Content Include="LICENSE.txt" />
     <Content Include="Scripts\index.js" />
+    <Content Include="Scripts\statLoaderTest.js" />
     <Content Include="Scripts\wsdot\title6\layerChooser.js" />
+    <Content Include="Scripts\wsdot\title6\statLoader.js" />
+    <Content Include="statLoaderTest.html" />
     <Content Include="Style\index.css" />
     <Content Include="Style\index.min.css">
       <DependentUpon>index.css</DependentUpon>
