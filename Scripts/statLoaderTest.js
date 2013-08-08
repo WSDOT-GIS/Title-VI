@@ -1,7 +1,7 @@
 ﻿/*global require*/
 require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 	"use strict";
-	var statLoader;
+	var statLoader, featureSet;
 
 	config.defaults.io.proxyUrl = "proxy.ashx";
 
@@ -15,6 +15,6 @@ require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 	});
 
 	statLoader.on("query-group-complete", function (featureSet) {
-		console.debug(featureSet);
+		
 	});
 });

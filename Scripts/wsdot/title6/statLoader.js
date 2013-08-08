@@ -13,9 +13,19 @@ define([
 		/**
 		@param {String} url The URL to a map service layer. (E.g., http://www.example.com/arcgis/rest/services/Demographic/Language/MapServer/1)
 		*/
-		constructor: function (url) {
+		constructor: function (url, options) {
 			//  Query to get feature IDs.
 			var self = this, query, queryTask;
+
+			// Create the options object if it does not already exist.
+			if (!options) {
+				options = {};
+			}
+
+			if (!options.threshold) {
+				options.threshold = 1000;
+			}
+			
 
 			query = new Query();
 			query.where = "1=1";
@@ -36,13 +46,14 @@ define([
 				function submitQuery(objectIds) {
 					query.objectIds = objectIds;
 					query.returnGeometry = true;
+					query.outFields = ["*"];
 					queryTask.execute(query);
 				}
 
 				// Break object IDs into groups of 1000 or fewer.
 
 				for (i = 0, l = objectIds.length; i < objectIds.length; i++) {
-					if (i % 1000 === 0) {
+					if (i % options.threshold === 0) {
 						currentGroup = [objectIds[i]];
 						idGroups.push(currentGroup);
 					} else {
