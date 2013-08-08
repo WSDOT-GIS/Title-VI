@@ -20,8 +20,9 @@
 			"use strict";
 			var url, re = /\/[^\/]+$/;
 
+
 			// Get the URL of this page without the query string.
-			url = location.origin + location.pathname;
+			url = location.href.match(/^[^?]+/)[0];
 
 			// Remove the document filename if present.
 			if (re.test(url)) {
