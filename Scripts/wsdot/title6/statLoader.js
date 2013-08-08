@@ -29,6 +29,7 @@ define([
 	}
 
 	StatLoader = declare([Evented], {
+		featureSets: null,
 		/**
 		@param {String} url The URL to a map service layer. (E.g., http://www.example.com/arcgis/rest/services/Demographic/Language/MapServer/1)
 		*/
@@ -66,9 +67,18 @@ define([
 			query.where = "1=1";
 
 			queryTask = new QueryTask(url);
+			/**
+			@param {Object} event
+			@param {Object} event.featureSet
+			@param {Object} event.target
+			*/
 			queryTask.on("complete", function (event) {
 				groupsCompleted++;
 				featureSets.push(event.featureSet);
+				self.featureSets = featureSets;
+				event.totalGroups = totalGroups;
+				event.groupsCompleted = groupsCompleted;
+				event.groupsErrored = groupsErrored;
 				self.emit("query-group-complete", event);
 				checkForCompleted();
 			});
