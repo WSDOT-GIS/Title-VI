@@ -1,13 +1,30 @@
 ﻿/*global require*/
+/*jslint browser:true*/
 require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 	"use strict";
-	var statLoader, featureSet, textArea;
+	var statLoader, textArea;
+
+	/** Gets the URL specified by the "url" query string parameter, or null if there is no such parameter.
+	@returns {String|null}
+	*/
+	function getUrlQSParameter() {
+		var urlRe, match, output = null;
+		if (document.location.search.length) {
+			urlRe = /url=([^\&]+)/gi;
+			match = document.location.search.match(urlRe);
+			if (match) {
+				output = match[1];
+				console.log("match found", output);
+			}
+		}
+		return output;
+	}
 
 	textArea = document.getElementById("output");
 
 	config.defaults.io.proxyUrl = "proxy.ashx";
 
-	statLoader = new StatLoader("http://hqolymgis99t/arcgis/rest/services/Demographic/Language/MapServer/1");
+	statLoader = new StatLoader(getUrlQSParameter() || "http://hqolymgis99t/arcgis/rest/services/Demographic/Language/MapServer/1");
 	statLoader.on("query-object-ids-complete", function (objectIds) {
 		console.log("Object IDs query complete", objectIds);
 	});

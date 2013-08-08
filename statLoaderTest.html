@@ -16,7 +16,13 @@
 			"use strict";
 			var url, re = /\/[^\/]+$/;
 
-			url = re.test(location.href) ? location.href.replace(re, "/") : location.href;
+			// Get the URL of this page without the query string.
+			url = location.origin + location.pathname;
+
+			// Remove the document filename if present.
+			if (re.test(url)) {
+				url = url.replace(re, "/");
+			}
 
 			var dojoConfig = {
 				async: true,

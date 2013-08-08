@@ -29,9 +29,12 @@ define([
 	}
 
 	StatLoader = declare([Evented], {
-		featureSets: null,
+		feautureSet: null,
 		/**
 		@param {String} url The URL to a map service layer. (E.g., http://www.example.com/arcgis/rest/services/Demographic/Language/MapServer/1)
+		@param {Object} options
+		@param {Number} options.threshold
+		@param {String} options.where The where clause to use with the query. Defaults to 1=1 if omitted.
 		*/
 		constructor: function (url, options) {
 			//  Query to get feature IDs.
@@ -45,6 +48,7 @@ define([
 				var combinedFeatureSet;
 				if (groupsCompleted + groupsErrored === totalGroups) {
 					combinedFeatureSet = combineFeatureSets(featureSets);
+					self.feautureSet = combinedFeatureSet;
 					self.emit("all-queries-complete", {
 						featureSet: combinedFeatureSet,
 						errorCount: groupsErrored
@@ -58,47 +62,46 @@ define([
 				options = {};
 			}
 
+			// Set up defaults.
 			if (!options.threshold) {
 				options.threshold = 1000;
 			}
 			
-
 			query = new Query();
-			query.where = "1=1";
+			query.where = options.where || "1=1";
 
 			queryTask = new QueryTask(url);
-			/**
-			@param {Object} event
-			@param {Object} event.featureSet
-			@param {Object} event.target
-			*/
-			queryTask.on("complete", function (event) {
-				groupsCompleted++;
-				featureSets.push(event.featureSet);
-				self.featureSets = featureSets;
-				event.totalGroups = totalGroups;
-				event.groupsCompleted = groupsCompleted;
-				event.groupsErrored = groupsErrored;
-				self.emit("query-group-complete", event);
-				checkForCompleted();
-			});
-			queryTask.on("error", function (error) {
-				groupsErrored++;
-				self.emit("query-error", error);
-				checkForCompleted();
-			});
-
 			queryTask.executeForIds(query, function (/**{Number[]}*/ objectIds) {
 				var i, l, idGroups = [], currentGroup;
 
 
 				self.emit("query-object-ids-complete", objectIds);
 
+				function onQueryError(error) {
+					groupsErrored++;
+					self.emit("query-error", error);
+					checkForCompleted();
+				}
+
+				function onQueryComplete(featureSet) {
+					var output;
+					groupsCompleted++;
+					featureSets.push(featureSet);
+					output = {
+						featureSet: featureSet,
+						totalGroups: totalGroups,
+						groupsCompleted: groupsCompleted,
+						groupsErrored: groupsErrored
+					};
+					self.emit("query-group-complete", output);
+					checkForCompleted();
+				}
+
 				function submitQuery(objectIds) {
 					query.objectIds = objectIds;
 					query.returnGeometry = true;
 					query.outFields = ["*"];
-					queryTask.execute(query);
+					queryTask.execute(query, onQueryComplete, onQueryError);
 				}
 
 				// Break object IDs into groups of 1000 or fewer.
