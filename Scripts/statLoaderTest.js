@@ -39,6 +39,21 @@ require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 		messageList.appendChild(li);
 	}
 
+	/** Updates the progress bar.
+	 * @param {Object} queryGroupCompleteResult
+	 * @param {Object} queryGroupCompleteResult.featureSet
+	 * @param {Number} queryGroupCompleteResult.totalGroups
+	 * @param {Number} queryGroupCompleteResult.groupsCompleted
+	 * @param {Number} queryGroupCompleteResult.groupsErrored
+	 */
+	function updateProgressBar(queryGroupCompleteResult) {
+		var prog, currentValue = queryGroupCompleteResult.groupsCompleted + queryGroupCompleteResult.groupsErrored;
+		prog = document.getElementsByTagName("progress")[0];
+
+		prog.max = queryGroupCompleteResult.totalGroups;
+		prog.value = currentValue;
+	}
+
 
 	config.defaults.io.proxyUrl = "proxy.ashx";
 
@@ -56,7 +71,7 @@ require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 	});
 
 	statLoader.on("query-group-complete", function (featureSet) {
-		//console.log("query group complete", featureSet);
+		updateProgressBar(featureSet);
 		addMessage("Query group complete");
 	});
 
@@ -66,11 +81,17 @@ require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 	});
 
 	statLoader.on("all-queries-complete", function (results) {
+		var progress;
 		if (results.errorCount) {
 			//console.log(["Queries completed with", results.errorCount, "errors"].join(" "));
 			addMessage(["Queries completed with", results.errorCount, "errors"].join(" "), "error");
 		} else {
 			addMessage("All queries completed.");
+		}
+		
+		progress = document.getElementsByTagName("progress")[0];
+		if (progress) {
+			progress.parentNode.removeChild(progress);
 		}
 	});
 });
