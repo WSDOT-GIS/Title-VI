@@ -6,11 +6,17 @@
 	<link href="//js.arcgis.com/3.6compact/js/dojo/dijit/themes/claro/claro.css" rel="stylesheet" />
 	<link href="Style/index.min.css" rel="stylesheet" />
 	<script>
-		(function() {
+		(function () {
 			"use strict";
 			var url, re = /\/[^\/]+$/;
 
-			url = re.test(location.href) ? location.href.replace(re, "/") : location.href;
+			// Get the URL of this page without the query string.
+			url = location.href.match(/^[^?]+/)[0];
+
+			// Remove the document filename if present.
+			if (re.test(url)) {
+				url = url.replace(re, "/");
+			}
 
 			var dojoConfig = {
 				async: true,

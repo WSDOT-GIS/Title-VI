@@ -10,9 +10,33 @@
 	 .error {
 		 color: red;
 	 }
+	 form {
+		 display: table;
+	 }
+	 form div {
+		 display: table-row;
+	 }
+	 form label, form input, form button {
+		 display: table-cell;
+	 }
+	 form input {
+		 width: 400px;
+	 }
 	</style>
 </head>
 <body>
+	<form action="">
+		<div>
+			<label for="urlBox">URL</label>
+			<input id="urlBox" type="url" name="url" placeholder="Enter the URL of a feature service or map service layer" />
+		</div>
+		<div>
+			<label for="whereBox">Where</label><input id="whereBox" type="text" name="where" placeholder="Enter where clause. Leave empty to select all." />
+		</div>
+		<div>
+			<button type="submit">Submit</button>
+		</div>
+	</form>
 	<progress>Loading data...</progress>
 	<ul id="messages"></ul>
 	<script>
@@ -31,7 +55,6 @@
 
 			var dojoConfig = {
 				async: true,
-				parseOnLoad: true,
 				paths: {
 					"title6": url + "Scripts/wsdot/title6"
 				}

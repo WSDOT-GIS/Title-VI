@@ -8,12 +8,21 @@ require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 	@returns {String|null} Returns the value of the query string parameter, or null if that parameter is not defined.
 	*/
 	function getQueryStringParameter(/** {String} */ key) {
-		var keyRe, match, output = null;
+		var keyRe, match, output = null, decoded;
 		if (document.location.search.length) {
 			keyRe = new RegExp(key + "=([^\\&]+)", "i");
 			match = document.location.search.match(keyRe);
 			if (match) {
 				output = match[1];
+				// Decode the component
+				decoded = decodeURIComponent(output);
+				// If it actually needed decoding, replace the plusses with %20 and re-decode.
+				// The plusses are not replaced with spaces as you might expect and cause problems
+				// with the where clause.
+				if (output !== decoded) {
+					output = output.replace(/\+/g, "%20");
+					output = decodeURIComponent(output);
+				}
 				console.log(key, output);
 			}
 		}
