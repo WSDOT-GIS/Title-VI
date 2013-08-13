@@ -37,8 +37,12 @@
 			<button type="submit">Submit</button>
 		</div>
 	</form>
-	<progress>Loading data...</progress>
+	<progress id="progressBar">Loading data...</progress>
 	<ul id="messages"></ul>
+
+	<form action="TextHandler.ashx" method="post" style="display: none" id="textHandlerForm">
+		<input id="dataInput" type="hidden" name="data" />
+	</form>
 	<script>
 		(function () {
 			"use strict";

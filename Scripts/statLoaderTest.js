@@ -57,12 +57,25 @@ require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 	 */
 	function updateProgressBar(queryGroupCompleteResult) {
 		var prog, currentValue = queryGroupCompleteResult.groupsCompleted + queryGroupCompleteResult.groupsErrored;
-		prog = document.getElementsByTagName("progress")[0];
+		prog = document.getElementById("progressBar");
 
 		prog.max = queryGroupCompleteResult.totalGroups;
 		prog.value = currentValue;
 	}
 
+	function hideProgressBar() {
+		document.getElementById("progressBar").hidden = true;
+	}
+
+	function saveFeatureSet(/**{FeatureSet}*/ featureSet) {
+		var json, pre;
+		json = featureSet.toJson();
+		json = JSON.stringify(json);
+		// TODO: Check for support of file system API support to save file. Use if supported by browser. See http://www.html5rocks.com/en/tutorials/file/filesystem/
+
+		document.getElementById("dataInput").value = json;
+		document.getElementById("textHandlerForm").submit();
+	}
 
 	config.defaults.io.proxyUrl = "proxy.ashx";
 
@@ -79,6 +92,7 @@ require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 		statLoader.on("query-object-ids-error", function (error) {
 			//console.error("Object IDs query error", error);
 			addMessage("Object IDs query error" + "\n" + JSON.stringify(error), "error");
+			hideProgressBar();
 		});
 
 		statLoader.on("query-group-complete", function (featureSet) {
@@ -92,7 +106,7 @@ require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 		});
 
 		statLoader.on("all-queries-complete", function (results) {
-			var progress;
+			var progress, featureSet = results.featureSet;
 			if (results.errorCount) {
 				//console.log(["Queries completed with", results.errorCount, "errors"].join(" "));
 				addMessage(["Queries completed with", results.errorCount, "errors"].join(" "), "error");
@@ -100,12 +114,14 @@ require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 				addMessage("All queries completed.");
 			}
 
+			saveFeatureSet(featureSet);
+
 			progress = document.getElementsByTagName("progress")[0];
 			if (progress) {
 				progress.parentNode.removeChild(progress);
 			}
 		});
 	} else {
-		document.getElementsByTagName("progress")[0].hidden = true;
+		hideProgressBar();
 	}
 });
