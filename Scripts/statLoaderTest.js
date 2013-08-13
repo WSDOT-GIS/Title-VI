@@ -2,7 +2,7 @@
 /*jslint browser:true*/
 require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 	"use strict";
-	var statLoader;
+	var statLoader, url;
 
 	/** Gets a query string parameter.
 	@returns {String|null} Returns the value of the query string parameter, or null if that parameter is not defined.
@@ -66,41 +66,46 @@ require(["esri/config", "title6/statLoader"], function (config, StatLoader) {
 
 	config.defaults.io.proxyUrl = "proxy.ashx";
 
-	statLoader = new StatLoader(getQueryStringParameter("url") || "http://hqolymgis99t/arcgis/rest/services/Demographic/Language/MapServer/1", {
-		where: getQueryStringParameter("where")
-	});
-	statLoader.on("query-object-ids-complete", function (objectIds) {
-		// console.log("Object IDs query complete", objectIds);
-		addMessage("Object IDs query complete.");
-	});
+	url = getQueryStringParameter("url");
+	if (url) {
+		statLoader = new StatLoader(url, {
+			where: getQueryStringParameter("where")
+		});
+		statLoader.on("query-object-ids-complete", function (objectIds) {
+			// console.log("Object IDs query complete", objectIds);
+			addMessage("Object IDs query complete.");
+		});
 
-	statLoader.on("query-object-ids-error", function (error) {
-		//console.error("Object IDs query error", error);
-		addMessage("Object IDs query error" + "\n" + JSON.stringify(error), "error");
-	});
+		statLoader.on("query-object-ids-error", function (error) {
+			//console.error("Object IDs query error", error);
+			addMessage("Object IDs query error" + "\n" + JSON.stringify(error), "error");
+		});
 
-	statLoader.on("query-group-complete", function (featureSet) {
-		updateProgressBar(featureSet);
-		addMessage("Query group complete");
-	});
+		statLoader.on("query-group-complete", function (featureSet) {
+			updateProgressBar(featureSet);
+			addMessage("Query group complete");
+		});
 
-	statLoader.on("query-error", function (error) {
-		//console.error("query-error", error);
-		addMessage("Query error" + "\n" + JSON.stringify(error), "error");
-	});
+		statLoader.on("query-error", function (error) {
+			//console.error("query-error", error);
+			addMessage("Query error" + "\n" + JSON.stringify(error), "error");
+		});
 
-	statLoader.on("all-queries-complete", function (results) {
-		var progress;
-		if (results.errorCount) {
-			//console.log(["Queries completed with", results.errorCount, "errors"].join(" "));
-			addMessage(["Queries completed with", results.errorCount, "errors"].join(" "), "error");
-		} else {
-			addMessage("All queries completed.");
-		}
-		
-		progress = document.getElementsByTagName("progress")[0];
-		if (progress) {
-			progress.parentNode.removeChild(progress);
-		}
-	});
+		statLoader.on("all-queries-complete", function (results) {
+			var progress;
+			if (results.errorCount) {
+				//console.log(["Queries completed with", results.errorCount, "errors"].join(" "));
+				addMessage(["Queries completed with", results.errorCount, "errors"].join(" "), "error");
+			} else {
+				addMessage("All queries completed.");
+			}
+
+			progress = document.getElementsByTagName("progress")[0];
+			if (progress) {
+				progress.parentNode.removeChild(progress);
+			}
+		});
+	} else {
+		document.getElementsByTagName("progress")[0].hidden = true;
+	}
 });
