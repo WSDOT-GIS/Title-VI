@@ -114,6 +114,10 @@ define([
 		getSelectionGraphics: function(drawnGeometry, scale, union, serviceAreaGeometry) {
 			var self = this, deferred = new Deferred(), type, geometryService;
 
+			/** Gets the default geometry service
+			 * @returns {esri/tasks/GeometryService}
+			 * @throws {TypeError} Throws an error if esri/config.defaults.geometryService is not defined.
+			 */
 			function getGeometryService() {
 				// Get the default geometry service.
 				var geometryService = esriConfig.defaults.geometryService;
