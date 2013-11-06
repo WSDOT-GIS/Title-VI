@@ -1,5 +1,10 @@
 ﻿/*global define*/
 /*jslint nomen:true,plusplus:true*/
+
+/* Required JavaScript features
+Array.prototype.map
+*/
+
 define([
 	"dojo/_base/declare",
 	"dojo/Deferred",
@@ -9,6 +14,7 @@ define([
 	"esri/tasks/query",
 	"esri/tasks/QueryTask",
 	"esri/tasks/StatisticDefinition",
+	"esri/tasks/RelationParameters",
 	"./raceData",
 	"./languageData",
 	"./ageData",
@@ -17,7 +23,7 @@ define([
 	"./utils",
 	"dojo/text!alpaca/aggregate_fields.txt"
 ], function (
-	declare, Deferred, Evented, esriConfig, Graphic, Query, QueryTask, StatisticDefinition,
+	declare, Deferred, Evented, esriConfig, Graphic, Query, QueryTask, StatisticDefinition, RelationParameters,
 	RaceData, LanguageData, AgeData, VeteranData, PovertyData, utils, fields)
 {
 	/** Provides classes for updating charts.
@@ -25,6 +31,22 @@ define([
 	 */
 	"use strict";
 	var ChartDataProvider, marginOfErrorRe, raceFieldRe, popFieldRe, povFieldRe, langFieldRe, numberTypesRe;
+
+	/** Determines if any of the values in an array match a given value.
+	 * @returns {boolean}
+	 */
+	function arrayContainsValue(/**{Array}*/ a, v) {
+		var output = false, i, l;
+
+		for (i = 0, l = a.length; i < l; i += 1) {
+			if (a[i] === v) {
+				output = true;
+				break;
+			}
+		}
+
+		return output;
+	}
 
 	// These regular expressions detect the charts
 	marginOfErrorRe = /^ME/;
@@ -175,6 +197,47 @@ define([
 		this.originalGeometry = originalGeometry || null;
 	}
 
+	/** Get the totals of each attribute of each of the featureSet's features.
+	 * @param {(esri/tasks/FeatureSet|esri/Graphic[])} featureSet - Either a FeatureSet or an array of Graphics.
+	 * @returns {ChartData}
+	 */
+	function getTotals(featureSet) {
+		// Initiate count totals.
+		var totals = {}, i, l, graphic, attrName, features;
+
+		// Determine if input parameter is a FeatureSet or an array of graphics...
+		if (featureSet.features) {
+			features = featureSet.features;
+		} else {
+			features = featureSet;
+		}
+
+		for (i = 0, l = features.length; i < l; i += 1) {
+			graphic = features[i];
+			// Add the values from the attributes to the totals
+			for (attrName in graphic.attributes) {
+				if (graphic.attributes.hasOwnProperty(attrName)) {
+					if (!totals[attrName]) {
+						totals[attrName] = graphic.attributes[attrName];
+					} else {
+						totals[attrName] += graphic.attributes[attrName];
+					}
+				}
+			}
+		}
+
+		totals = new ChartData(totals);
+
+		return totals;
+	}
+
+	/** Returns the geometry property of a Graphic. Intended for use with Array.map function.
+	 * @returns {Geometry}
+	 */
+	function getGeometryFromGraphic(/**{Graphic}*/ feature) {
+		return feature.geometry;
+	}
+
 	/** An object used to provide chart data.
 	 * @fires ChartDataProvider#totals-determined Fired when the data for the charts has been calculated.
 	 * @fires ChartDataProvider#query-complete Occurs when a query has been completed.
@@ -251,6 +314,16 @@ define([
 				});
 			}
 
+			function updateTotalsDetermined(totals) {
+				self.emit("totals-determined", totals);
+
+				// Update progress on the deferred object.
+				deferred.progress({
+					message: "totals determined",
+					totals: totals
+				});
+			}
+
 			function performQuery(geometry) {
 				var query, queryTask;
 				// Get the query task for the current scale.
@@ -264,44 +337,43 @@ define([
 
 				// Query to determine intersecting geometry.
 				queryTask.execute(query, function (/** {FeatureSet}*/ featureSet) {
-					var totals, geometries = [], i, l, graphic, attrName, output;
+					var totals, geometries, graphic, output, relationParameters;
 
 
 
+					/** @typedef Relationship
+					 * @property {number} geometry1Index - Index corresponding to the "responseGeometries" array.
+					 * @property {number} geometry2Index - Index corresponding to the servideAreaLayer.graphics array. In this app there is only ever one service area graphic, so this will always be 0.
+					 */
 
-					// Initiate count totals.
-					totals = {};
+					/** Adds the county geometries that are inside of the service area to the selection graphics layer.
+					 * @param {Relationship[]} relationships
+					 */
+					function handleRelation(relationships) {
+						var i, l, relationship, previouslyEncounteredIndexes = [], features = [], totals;
 
-					for (i = 0, l = featureSet.features.length; i < l; i += 1) {
-						graphic = featureSet.features[i];
-						// Add the geometry to the geometries array.
-						if (graphic.geometry) {
-							geometries.push(graphic.geometry);
-						}
-						// Add the values from the attributes to the totals
-						for (attrName in graphic.attributes) {
-							if (graphic.attributes.hasOwnProperty(attrName)) {
-								if (!totals[attrName]) {
-									totals[attrName] = graphic.attributes[attrName];
-								} else {
-									totals[attrName] += graphic.attributes[attrName];
-								}
+						for (i = 0, l = relationships.length; i < l; i += 1) {
+							relationship = relationships[i];
+							if (!arrayContainsValue(previouslyEncounteredIndexes, relationship.geometry1Index)) {
+								features.push(featureSet.features[relationship.geometry1Index]);
+								previouslyEncounteredIndexes.push(relationship.geometry1Index);
 							}
 						}
+
+						totals = getTotals(features);
+						updateTotalsDetermined(totals);
+
+						output = new ChartDataQueryResult(type, features, totals, drawnGeometry);
+						deferred.resolve(output);
+						self.emit("query-complete", output);
 					}
 
-					totals = new ChartData(totals);
+					// Convert the array of Graphics into corresponding Geometry array.
+					geometries = featureSet.features.map(getGeometryFromGraphic);
 
 					if (union) {
-
-
-						self.emit("totals-determined", totals);
-
-						// Update progress on the deferred object.
-						deferred.progress({
-							message: "totals determined",
-							totals: totals
-						});
+						totals = getTotals(featureSet);
+						updateTotalsDetermined(totals);
 
 						geometryService = getGeometryService();
 						geometryService.union(geometries, function (geometry) {
@@ -314,9 +386,17 @@ define([
 							deferred.reject(error);
 						});
 					} else {
-						output = new ChartDataQueryResult(type, featureSet.features, totals, drawnGeometry);
-						deferred.resolve(output);
-						self.emit("query-complete", output);
+
+						// TODO: Add intersect operation to limit geometries passed to the relation operation.
+
+						relationParameters = new RelationParameters();
+						relationParameters.geometries1 = geometries;
+						relationParameters.geometries2 = [serviceAreaGeometry];
+						relationParameters.relation = RelationParameters.SPATIAL_REL_INTERIORINTERSECTION;
+
+						geometryService.relation(relationParameters, handleRelation, function (error) {
+							deferred.reject(error);
+						});
 					}
 				}, function (error) {
 					self.emit("error", error);
