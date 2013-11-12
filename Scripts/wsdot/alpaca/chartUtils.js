@@ -8,11 +8,17 @@ define([
 	"dojox/charting/action2d/MoveSlice",
 	"dojox/charting/action2d/Tooltip",
 	"dojox/charting/action2d/Shake",
-	"dojox/charting/action2d/MouseZoomAndPan"
+	"dojox/charting/action2d/MouseZoomAndPan",
 ], function (Chart, Pie, Columns, Highlight, MoveSlice, Tooltip, Shake, MouseZoomAndPan) {
 	"use strict";
 
+	/** exports chartUtils
+	 */
 	return {
+		/** Creates the language chart
+		 * @param {LanguageData} languageData
+		 * @returns {dojo/charting/Chart}
+		 */
 		createLanguageChart: function (languageData) {
 			var chart, anim_a, anim_b, anim_c, mouseZoomAndPan;
 			chart = new Chart("languageChart", {
@@ -59,7 +65,10 @@ define([
 			return chart;
 		},
 
-		createRaceChart: function (raceData) {
+		/** Creates the race chart
+		 * @returns {dojo/charting/Chart}
+		 */
+		createRaceChart: function (/**{RaceData}*/ raceData) {
 			var chart, anim_a, anim_b, anim_c;
 			chart = new Chart("minorityChart", {
 				title: "Race",
@@ -81,6 +90,9 @@ define([
 			return chart;
 		},
 
+		/** Creates the age chart
+		 * @returns {dojo/charting/Chart}
+		 */
 		createAgeChart: function (/**{AgeData}*/ ageData) {
 			var chart, anim_a, anim_b, anim_c, mouseZoomAndPan, labels = ageData.createLabels();
 
@@ -98,7 +110,7 @@ define([
 				labels: labels,
 				////dropLabels: false,
 				minorLabels: false,
-				title: "Age groups",
+				//title: "Age groups",
 				titleOrientation: "away",
 				majorTickStep: 1,
 				minorTickStep: 0.5,
@@ -107,11 +119,11 @@ define([
 			chart.addAxis("y", {
 				vertical: true,
 				//max: ageData.getTotal() - ageData.english,
-				title: "Population",
+				//title: "Population",
 				includeZero: true
 			});
 			chart.addSeries("Age", ageData.toColumnChartSeries());
-			mouseZoomAndPan = new MouseZoomAndPan(chart, "default", { axis: "x" });
+			mouseZoomAndPan = new MouseZoomAndPan(chart, "default", { axis: "y" });
 			anim_a = new Shake(chart, "default", {
 				shiftX: 10,
 				shiftY: 10
@@ -122,7 +134,10 @@ define([
 			return chart;
 		},
 
-		createVeteranChart: function (raceData) {
+		/** Creates the veteran chart
+		 * @returns {dojo/charting/Chart}
+		 */
+		createVeteranChart: function (/**{VeteranData}*/ veteranData) {
 			var chart, anim_a, anim_b, anim_c;
 			chart = new Chart("veteranChart", {
 				title: "Veterans",
@@ -136,7 +151,7 @@ define([
 				fontColor: "black",
 				labelOffset: -30,
 				radius: 100
-			}).addSeries("Veterans", raceData.toColumnChartSeries());
+			}).addSeries("Veterans", veteranData.toColumnChartSeries());
 			anim_a = new MoveSlice(chart, "default");
 			anim_b = new Highlight(chart, "default");
 			anim_c = new Tooltip(chart, "default");
@@ -144,7 +159,10 @@ define([
 			return chart;
 		},
 
-		createPovertyChart: function (povertyData) {
+		/** Creates the poverty chart
+		 * @returns {dojo/charting/Chart}
+		 */
+		createPovertyChart: function (/**{PovertyData}*/ povertyData) {
 			var chart, anim_a, anim_b, anim_c;
 			chart = new Chart("povertyChart", {
 				title: "Poverty",

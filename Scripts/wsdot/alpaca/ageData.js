@@ -1,5 +1,5 @@
 ﻿/*global define*/
-define(function () {
+define(["dojo/number"], function (number) {
 	"use strict";
 
 	var AgeData, AgeGroupedData;
@@ -58,6 +58,9 @@ define(function () {
 		this.ageOver85 = queryResults[ prefix ? prefix + "_Over85" : "ageOver85"] || 0;
 	};
 
+	/** Gets the total number of people in all age groups
+	 * @returns {number}
+	 */
 	AgeGroupedData.prototype.getTotal = function () {
 		var propName, v, output = 0;
 		for (propName in this) {
@@ -71,6 +74,10 @@ define(function () {
 		return output;
 	};
 
+	/** Gets the percentage of a value of the total.
+	 * @param {number} v - A number of people ≦ total.
+	 * @param {number} total - The total number of people.
+	 */
 	function getPercent(v, total) {
 		var output;
 		if (total) {
@@ -79,17 +86,47 @@ define(function () {
 		return output;
 	}
 
-	/** @returns {string} */
+	/** Creates a label from a property name, removing the "age" prefix and adding spaces between numbers and words.
+	 * @returns {string} 
+	 */
 	function createLabelFromPropertyName(/**{string}*/ propertyName) {
-		var rangeRe = /^age(\d*?)([a-z]*)(\d+)$/i, m;
+		var rangeRe = /(\d+)to(\d+)/i, overRe = /(\d+)(?:(?:Plus)|(?:AndOver))/i, re = /(?:\d+)|(?:[A-Z][a-z]+)/g, output = [], m;
 		m = propertyName.match(rangeRe);
 		if (m) {
-			m = m.slice(1);
+			// If it's a range, separate the two numbers with "-"
+			output = m.slice(1).join('-');
+		} else {
+			m = propertyName.match(overRe);
+			if (m) {
+				// If it's "OverXX", output "XX+"
+				output = m[1] + "+";
+			} else {
+				// Separate words and numbers.
+				m = re.exec(propertyName);
+				while (m) {
+					output.push(m[0]);
+					m = re.exec(propertyName);
+				}
+				output = output.join(" ");
+			}
 		}
-		return m.join(" ").trim();
+		return output;
 	}
 
-	AgeGroupedData.prototype.toColumnChartSeries = function (/** {number} */ total, /** {string} */ color) {
+	/** @typedef {Object} ColumnChartSeriesItem
+	 * @property {number} y
+	 * @property {string} text
+	 * @property {(string|null)} fill - the fill color
+	 * @property {string} stroke - the stroke color
+	 * @property {string} tooltip
+	 */
+
+	/** Creates a column chart series for a dojo chart.
+	 * @param {number} total
+	 * @param {string} {string} [color=null]
+	 * @returns {ColumnChartSeriesItem[]}
+	 */
+	var toColumnChartSeries = function (/** {number} */ total, /** {string} */ color) {
 		var output = [], item, v, propName, label;
 		for (propName in this) {
 			if (this.hasOwnProperty(propName)) {
@@ -101,7 +138,7 @@ define(function () {
 						text: label,
 						fill: color || null,
 						stroke: "black",
-						tooltip: total ? [label, ": (~", getPercent(v, total), "%)"].join("") : [label, ": ", v].join("")
+						tooltip: total ? [label, ": ", number.format(v), " (~", getPercent(v, total), "%)"].join("") : [label, ": ", v].join("")
 					};
 
 					output.push(item);
@@ -112,11 +149,36 @@ define(function () {
 		return output;
 	};
 
+	AgeGroupedData.prototype.toColumnChartSeries = toColumnChartSeries;
+
+	/**
+	 * @param {AgeGroupedData} agd
+	 * @constructor
+	 */
+	function SubGroupedAgeData(agd) {
+		/** @member {number} */
+		this.ageUnder5 = agd.ageUnder5;
+		/** @member {number} */
+		this.age5to17 = agd.age5to9 + agd.age10to14 + agd.age15to17;
+		/** @member {number} */
+		this.age18to64 = agd.age18to19 + agd.age20 + agd.age21 + agd.age22to24 +
+			agd.age25to29 + agd.age30to34 + agd.age35to39 + agd.age40to44 + agd.age45to49 +
+			agd.age50to54 + agd.age55to59 + agd.age60to61 + agd.age62to64;
+		/** @member {number} */
+		this.age65to84 = agd.age65to66 + agd.age67to69 + agd.age70to74 + agd.age75to79 + agd.age80to84;
+		/** @member {number} */
+		this.age85Plus = agd.ageOver85;
+	}
+
+	SubGroupedAgeData.prototype.toColumnChartSeries = toColumnChartSeries;
+
 	/** 
+	 * @exports AgeData
+	 * @constructor
 	 * @member {AgeGroupedData} male
 	 * @member {AgeGroupedData} female
 	 * @member {AgeGroupedData} combined - combined male and female age data.
-	*/
+	 */
 	AgeData = function (queryResults) {
 		this.male = new AgeGroupedData(queryResults, "M");
 		this.female = new AgeGroupedData(queryResults, "F");
@@ -130,11 +192,16 @@ define(function () {
 		}
 
 		this.combined = new AgeGroupedData(this.combined);
+		this.combinedSubgrouped = new SubGroupedAgeData(this.combined);
 	};
 
+	/** Returns the total number of people, both male and female.
+	 * @returns {number}
+	 */
 	AgeData.prototype.getTotal = function () {
 		return this.male.getTotal() + this.female.getTotal();
 	};
+	
 
 	AgeData.AgeGroupedData = AgeGroupedData;
 
@@ -146,18 +213,23 @@ define(function () {
 
 		total = this.getTotal();
 
-		output = this.combined.toColumnChartSeries(total, "hsl(240,100%, 50%)"); // this.male.toColumnChartSeries(total, "blue").concat(this.female.toColumnChartSeries(total, "pink"));
+		output = this.combinedSubgrouped.toColumnChartSeries(total, "hsl(240,100%, 50%)"); // this.male.toColumnChartSeries(total, "blue").concat(this.female.toColumnChartSeries(total, "pink"));
 
 		return output;
 	};
 
+	/** @typedef {Object} LabelInfo
+	 * @property {string} text - The label that will be displayed on the chart.
+	 * @property {number} value - The index that the label corresponds to on the chart.
+	 */
+
 	/** Creates labels for the chart.
-	 * @returns {string}
+	 * @returns {LabelInfo[]}
 	 */
 	AgeData.prototype.createLabels = function () {
 		var output = [], i = 0;
-		for (var propName in this.combined) {
-			if (this.combined.hasOwnProperty(propName)) {
+		for (var propName in this.combinedSubgrouped) {
+			if (this.combinedSubgrouped.hasOwnProperty(propName)) {
 				output.push({
 					text: createLabelFromPropertyName(propName),
 					value: ++i
